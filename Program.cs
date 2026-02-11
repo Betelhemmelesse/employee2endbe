@@ -20,6 +20,9 @@ builder.Services.AddScoped<PositionService>();
 // dep't
 builder.Services.AddScoped<DashboardService>();
 
+// activity log
+builder.Services.AddScoped<ActivityService>();
+
 // dep't 
 builder.Services.AddScoped<DepartmentService>();
 

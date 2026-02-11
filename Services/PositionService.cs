@@ -8,10 +8,11 @@ namespace EmployeeHierarchy.Api.Services
     public class PositionService
     {
         private readonly AppDbContext _context;
-
-        public PositionService(AppDbContext context)
+        private readonly ActivityService _activityService; 
+        public PositionService(AppDbContext context, ActivityService activityService) 
         {
             _context = context;
+            _activityService = activityService;
         }
 
         // GET: Build Tree
@@ -73,6 +74,8 @@ namespace EmployeeHierarchy.Api.Services
 
             _context.Positions.Add(pos);
             await _context.SaveChangesAsync();
+
+            await _activityService.LogAsync(dto.EmployeeName, $"joined as {dto.Name}", "Join");
             return pos;
         }
 
@@ -83,23 +86,20 @@ namespace EmployeeHierarchy.Api.Services
             if (pos == null) throw new KeyNotFoundException("Position not found");
 
             // Prevent circular reference (Can't be your own parent)
-            if (dto.ParentId == id) throw new Exception("Position cannot be its own parent");
+            string oldName = pos.Name;
 
-            if (!string.IsNullOrWhiteSpace(dto.Name)) 
-                pos.Name = dto.Name;
-
-            if (!string.IsNullOrWhiteSpace(dto.EmployeeName))
-                pos.EmployeeName = dto.EmployeeName;
-
-            if (!string.IsNullOrWhiteSpace(dto.Description)) 
-                pos.Description = dto.Description;
-
-            if (dto.DepartmentId != Guid.Empty) 
-                pos.DepartmentId = dto.DepartmentId; 
-                
+            pos.Name = !string.IsNullOrWhiteSpace(dto.Name) ? dto.Name : pos.Name;
+            pos.EmployeeName = !string.IsNullOrWhiteSpace(dto.EmployeeName) ? dto.EmployeeName : pos.EmployeeName;
+            pos.Description = !string.IsNullOrWhiteSpace(dto.Description) ? dto.Description : pos.Description;
+            pos.DepartmentId = dto.DepartmentId != Guid.Empty ? dto.DepartmentId : pos.DepartmentId;
             pos.ParentId = dto.ParentId;
 
             await _context.SaveChangesAsync();
+
+            if (oldName != pos.Name)
+                await _activityService.LogAsync(pos.EmployeeName, $"promoted to {pos.Name}", "Update");
+            else
+                await _activityService.LogAsync("Hierarchy", "structure updated", "Update");
         }
 
         // DELETE
@@ -110,6 +110,8 @@ namespace EmployeeHierarchy.Api.Services
 
             if (pos.Children.Any())
                 throw new Exception("Cannot delete position with subordinates. Reassign them first.");
+
+            await _activityService.LogAsync(pos.Name, "position removed", "Delete");
 
             _context.Positions.Remove(pos);
             await _context.SaveChangesAsync();
@@ -134,6 +136,9 @@ namespace EmployeeHierarchy.Api.Services
     ParentId = position.ParentId,
 };
 }
+
+// add activityservice to the constructor
+
 
 // error kehone atfiw
 // Get the tree hierarchy but filtered for one department

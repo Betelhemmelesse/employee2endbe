@@ -9,10 +9,12 @@ namespace EmployeeHierarchy.Api.Controllers
     public class DashboardController : ControllerBase
     {
         private readonly DashboardService _service;
+        private readonly ActivityService _activityService;
 
-        public DashboardController(DashboardService service)
+        public DashboardController(DashboardService service, ActivityService activityService) // 👈 Update Constructor
         {
             _service = service;
+            _activityService = activityService;
         }
 
         [HttpGet("stats")]
@@ -21,7 +23,12 @@ namespace EmployeeHierarchy.Api.Controllers
             try
             {
                 var stats = await _service.GetDashboardStatsAsync();
-                return Ok(stats);
+                 var activities = await _activityService.GetRecentActivitiesAsync(); 
+                 return Ok(new 
+                { 
+                    Stats = stats, 
+                    RecentActivity = activities 
+                });
             }
             catch (System.Exception ex)
             {

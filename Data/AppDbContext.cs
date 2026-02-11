@@ -7,6 +7,7 @@ namespace EmployeeHierarchy.Api.Data
     {
         public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
         public DbSet<Department> Departments { get; set; }
+        public DbSet<ActivityLog> ActivityLogs { get; set; }
 
         public DbSet<Position> Positions { get; set; }
         public DbSet<User> Users { get; set; }
