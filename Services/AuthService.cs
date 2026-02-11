@@ -21,23 +21,34 @@ namespace EmployeeHierarchy.Api.Services
             _config = config;
         }
 
-        public async Task<User> RegisterAsync(RegisterDto dto)
-        {
-            if (await _context.Users.AnyAsync(u => u.Username == dto.Username))
-                throw new Exception("Username already exists");
+public async Task<User> RegisterAsync(RegisterDto dto)
+{
+    // 1. Check if username already exists
+    if (await _context.Users.AnyAsync(u => u.Username == dto.Username))
+        throw new Exception("Username already exists");
 
-            // Hash the password
-            var user = new User
-            {
-                Id = Guid.NewGuid(),
-                Username = dto.Username,
-                PasswordHash = BCrypt.Net.BCrypt.HashPassword(dto.Password)
-            };
+    // 2. NEW: Check if email already exists
+    if (await _context.Users.AnyAsync(u => u.Email == dto.Email))
+        throw new Exception("Email is already in use");
 
-            _context.Users.Add(user);
-            await _context.SaveChangesAsync();
-            return user;
-        }
+    // 3. Determine Role
+    bool isFirstUser = !await _context.Users.AnyAsync();
+    string assignedRole = isFirstUser ? "Admin" : "User";
+
+    // 4. Create the new user object
+    var user = new User
+    {
+        Id = Guid.NewGuid(),
+        Username = dto.Username,
+        Email = dto.Email, // 👈 Now this works because DTO has Email
+        PasswordHash = BCrypt.Net.BCrypt.HashPassword(dto.Password),
+        Role = assignedRole
+    };
+
+    _context.Users.Add(user);
+    await _context.SaveChangesAsync();
+    return user;
+}
 
         public async Task<string> LoginAsync(LoginDto dto)
         {

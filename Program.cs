@@ -17,10 +17,18 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 // 2. Services
 builder.Services.AddScoped<AuthService>();
 builder.Services.AddScoped<PositionService>();
+// dep't
+builder.Services.AddScoped<DashboardService>();
 
+// dep't 
+builder.Services.AddScoped<DepartmentService>();
+
+// latter added to get all users
+builder.Services.AddScoped<UserService>();
 // 3. Authentication
 var jwtKey = builder.Configuration["JwtSettings:Key"];
 var keyBytes = Encoding.UTF8.GetBytes(jwtKey!);
+
 
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>

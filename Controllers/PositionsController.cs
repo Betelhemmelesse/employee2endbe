@@ -23,6 +23,8 @@ namespace EmployeeHierarchy.Api.Controllers
             return Ok(await _service.GetTreeAsync());
         }
 
+        
+
         [HttpPost]
         public async Task<IActionResult> Create(CreatePositionDto dto)
         {
@@ -31,6 +33,24 @@ namespace EmployeeHierarchy.Api.Controllers
                 return Ok(result);
             } catch (Exception ex) { return BadRequest(ex.Message); }
         }
+
+        [HttpGet("{id}")]
+public async Task<IActionResult> GetById(Guid id)
+{
+    try 
+    {
+        var result = await _service.GetByIdAsync(id);
+        if (result == null) 
+        {
+            return NotFound(new { message = $"Position with ID {id} not found." });
+        }
+        return Ok(result);
+    } 
+    catch (Exception ex) 
+    { 
+        return BadRequest(ex.Message); 
+    }
+}
 
         [HttpPut("{id}")]
         public async Task<IActionResult> Update(Guid id, UpdatePositionDto dto)

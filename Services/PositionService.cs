@@ -17,14 +17,17 @@ namespace EmployeeHierarchy.Api.Services
         // GET: Build Tree
         public async Task<List<PositionDto>> GetTreeAsync()
         {
-            var positions = await _context.Positions.ToListAsync();
+            var positions = await _context.Positions.Include(p => p.Department).ToListAsync();
 
             // Map Entity to DTO
             var dtos = positions.Select(p => new PositionDto
             {
                 Id = p.Id,
                 Name = p.Name,
+                EmployeeName = p.EmployeeName,
                 Description = p.Description,
+                DepartmentId = p.DepartmentId,
+                DepartmentName = p.Department?.Name,
                 ParentId = p.ParentId
             }).ToList();
 
@@ -62,7 +65,9 @@ namespace EmployeeHierarchy.Api.Services
             {
                 Id = Guid.NewGuid(),
                 Name = dto.Name,
+                EmployeeName = dto.EmployeeName,
                 Description = dto.Description,
+                DepartmentId = dto.DepartmentId,
                 ParentId = dto.ParentId
             };
 
@@ -80,8 +85,18 @@ namespace EmployeeHierarchy.Api.Services
             // Prevent circular reference (Can't be your own parent)
             if (dto.ParentId == id) throw new Exception("Position cannot be its own parent");
 
-            pos.Name = dto.Name;
-            pos.Description = dto.Description;
+            if (!string.IsNullOrWhiteSpace(dto.Name)) 
+                pos.Name = dto.Name;
+
+            if (!string.IsNullOrWhiteSpace(dto.EmployeeName))
+                pos.EmployeeName = dto.EmployeeName;
+
+            if (!string.IsNullOrWhiteSpace(dto.Description)) 
+                pos.Description = dto.Description;
+
+            if (dto.DepartmentId != Guid.Empty) 
+                pos.DepartmentId = dto.DepartmentId; 
+                
             pos.ParentId = dto.ParentId;
 
             await _context.SaveChangesAsync();
@@ -99,5 +114,61 @@ namespace EmployeeHierarchy.Api.Services
             _context.Positions.Remove(pos);
             await _context.SaveChangesAsync();
         }
+
+        public async Task<PositionDto?> GetByIdAsync(Guid id)
+{
+    // 1. Find the position in the database
+    var position = await _context.Positions
+        .FirstOrDefaultAsync(p => p.Id == id);
+
+    if (position == null) return null;
+
+    // 2. Map the Database Entity to a DTO (Data Transfer Object)
+    // Adjust these fields based on your actual PositionDto class
+    return new PositionDto
+{
+    Id = position.Id,
+    Name = position.Name,
+    EmployeeName = position.EmployeeName, // ADD THIS
+    Description = position.Description,
+    ParentId = position.ParentId,
+};
+}
+
+// error kehone atfiw
+// Get the tree hierarchy but filtered for one department
+public async Task<List<PositionDto>> GetTreeByDepartmentAsync(Guid departmentId)
+{
+    // 1. Only get positions belonging to this department
+    var positions = await _context.Positions
+        .Where(p => p.DepartmentId == departmentId)
+        .ToListAsync();
+
+    // 2. Map to DTOs
+    var dtos = positions.Select(p => new PositionDto
+    {
+        Id = p.Id,
+        Name = p.Name,
+        EmployeeName = p.EmployeeName,
+        ParentId = p.ParentId
+    }).ToList();
+
+    // 3. Build the mini-tree (same logic as your GetTreeAsync)
+    var dict = dtos.ToDictionary(x => x.Id);
+    var rootNodes = new List<PositionDto>();
+
+    foreach (var dto in dtos)
+    {
+        if (dto.ParentId.HasValue && dict.ContainsKey(dto.ParentId.Value))
+        {
+            dict[dto.ParentId.Value].Children.Add(dto);
+        }
+        else
+        {
+            rootNodes.Add(dto);
+        }
+    }
+    return rootNodes;
+}
     }
 }
